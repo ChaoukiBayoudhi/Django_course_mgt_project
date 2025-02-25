@@ -56,7 +56,7 @@ class Profile(models.Model):
     linkedIn=models.URLField()
     github=models.URLField()
     photo=models.ImageField(upload_to="images/student_images/",null=True, blank=True)
-     class Meta:
+    class Meta:
         db_table="profiles"
         ordering=["linkedIn","github"]
 class Location(models.Model):
@@ -71,4 +71,3 @@ class Location(models.Model):
             fields=["locationNumber","streetName","zipCode"],
             name="unique_location"
         )]
-#
