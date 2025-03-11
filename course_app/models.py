@@ -1,9 +1,14 @@
 from django.db import models
+from django.core.validators import RegexValidator,MaxValueValidator,MinValueValidator,FileExtensionValidator
 class Person(models.Model):
     name=models.CharField(max_length=50)
     familyName=models.CharField(max_length=50)
     email=models.EmailField(unique=True)
     birthdate=models.DateField()
+    def __str__(self) -> str:
+        #return self.name+" "+self.familyName
+        #return f'{self.name} {self.familyName}'
+        return '%s %s'%(self.name,self.familyName)
     class Meta:
         #abstract model : it will not create a table in the database
         abstract=True
@@ -28,6 +33,8 @@ class Tutor(Person):
     '''
     #2nd method to define choices : using a models.TextChoices class
     grade=models.CharField(max_length=50,choices=TutorGrade.choices,default=TutorGrade.ASST)
+    def __str__(self) -> str:
+        return f'{super().__str__()} ({self.grade})'
     class Meta:
         db_table='tutors'
 
@@ -37,11 +44,17 @@ class Course(models.Model):
     startDate=models.DateField(auto_now_add=True)
     nbLectures=models.PositiveSmallIntegerField()
     duration=models.DurationField()
-    coefficient=models.FloatField()
-    courseAvatar=models.ImageField(upload_to='images/course_avatars/',blank=True,null=True)
+    coefficient=models.FloatField(validators=[
+                        MinValueValidator(1,'Value must be at list ONE.'),
+                        MaxValueValidator(3,'Value must be at most THREE.')
+    ])
+    courseAvatar=models.ImageField(upload_to='images/course_avatars/',blank=True,null=True,
+                                   validators=[FileExtensionValidator(['png','gif'])])
     #relationship between Course and Tutor (1-*)
     tutor=models.ForeignKey(Tutor,on_delete=models.SET_NULL,null=True,
                             related_name='courses')
+    def __str__(self) -> str:
+        return f'{self.name} ({self.tutor.name} {self.tutor.familyName})'
     class Meta:
         db_table='courses'
         ordering=['name'] #order by name in ascending order
@@ -51,7 +64,11 @@ class Course(models.Model):
 
 
 class Student(Person):
-    cin=models.CharField(max_length=8,primary_key=True)
+    cin=models.CharField(max_length=8,primary_key=True,
+                         validators=[RegexValidator(regex='^\d{8}$',
+                                                    message='The CIN must be of 8 digits.'
+                                                    )
+                                    ] )
     #relationship between Student and Course (*-*) through Enrollement
     courses=models.ManyToManyField(Course,through='Enrollement',
                                    through_fields=('student','course'),
@@ -90,6 +107,8 @@ class Enrollement(models.Model):
     course=models.ForeignKey(Course,on_delete=models.CASCADE)
     registrationDate=models.DateField(auto_now_add=True)
     result=models.FloatField()
+    def __str__(self) -> str:
+        return self.student.cin+"-"+self.course.name
     class Meta:
         db_table="enrollements"
         constraints=[models.UniqueConstraint(
