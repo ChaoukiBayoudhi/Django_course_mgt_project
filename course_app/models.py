@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator,MaxValueValidator,MinValueValidator,FileExtensionValidator
+from datetime import datetime as dt, timedelta as td
+from django.core.exceptions import ValidationError
 class Person(models.Model):
     name=models.CharField(max_length=50)
     familyName=models.CharField(max_length=50)
@@ -37,11 +39,14 @@ class Tutor(Person):
         return f'{super().__str__()} ({self.grade})'
     class Meta:
         db_table='tutors'
-
+def CourseNameValidator(value:str):
+    if 'course' not in value.lower() or str(dt.now().year) not in value:
+        raise ValidationError('The course name must contain the word "course" and the current year.')
 class Course(models.Model):
     #id=models.IntegerField(primary_key=True)
-    name=models.CharField(max_length=100,unique=True)
-    startDate=models.DateField(auto_now_add=True)
+    name=models.CharField(max_length=100,unique=True,
+                          validators=[CourseNameValidator])
+    startDate=models.DateField(default=dt.now)
     nbLectures=models.PositiveSmallIntegerField()
     duration=models.DurationField()
     coefficient=models.FloatField(validators=[
@@ -55,13 +60,22 @@ class Course(models.Model):
                             related_name='courses')
     def __str__(self) -> str:
         return f'{self.name} ({self.tutor.name} {self.tutor.familyName})'
+    
+    #redefining the clean method 
+    # to validate the course duration and start date
+    #duration must be between 21 hours and 84 hours
+    #start date must be at least 7 days from now
+    def clean(self):
+        if self.duration<td(hours=21) or self.duration>td(hours=84):
+            raise ValidationError('The course duration must be between 21 and 84 hours.')
+        if self.startDate<dt.now().date()+td(days=7):
+            raise ValidationError('The course start date must be at least 7 days from now.')
+
     class Meta:
         db_table='courses'
         ordering=['name'] #order by name in ascending order
         #ordering=['-name'] #order by name in descending order
         #ordering=['startDate','duration','coefficient']
-
-
 
 class Student(Person):
     cin=models.CharField(max_length=8,primary_key=True,
