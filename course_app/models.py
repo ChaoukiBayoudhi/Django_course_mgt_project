@@ -116,7 +116,7 @@ class Location(models.Model):
             fields=["locationNumber","streetName","zipCode"],
             name="unique_location"
         )]
-class Enrollement(models.Model):
+class Enrollment(models.Model):
     student=models.ForeignKey(Student,on_delete=models.CASCADE)
     course=models.ForeignKey(Course,on_delete=models.CASCADE)
     registrationDate=models.DateField(auto_now_add=True)
@@ -124,9 +124,9 @@ class Enrollement(models.Model):
     def __str__(self) -> str:
         return self.student.cin+"-"+self.course.name
     class Meta:
-        db_table="enrollements"
+        db_table="enrollments"
         constraints=[models.UniqueConstraint(
             fields=["student","course"],
-            name="unique_enrollement_student_course"
+            name="unique_enrollment_student_course"
         )]
         ordering=["registrationDate"]
